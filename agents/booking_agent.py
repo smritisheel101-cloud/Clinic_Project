@@ -37,4 +37,3 @@ def create_booking_node(calendar_tools):
         return {"messages": [response]}
     
     return booking_node, calendar_tools
-    
