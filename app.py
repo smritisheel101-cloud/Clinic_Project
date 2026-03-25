@@ -1,5 +1,5 @@
 """
-Streamlit UI for HealthFirst Medical Clinic
+Streamlit UI for WellCare Plus Clinic
 Imports the LangGraph graph directly (no API calls).
 Run: streamlit run app.py
 """
@@ -16,10 +16,8 @@ def _extract_text(messages) -> str:
         if not isinstance(msg, AIMessage):
             continue
         content = msg.content
-        # String content — return directly if non-empty
         if isinstance(content, str) and content.strip():
             return content
-        # List of content blocks (Bedrock format) — extract text parts
         if isinstance(content, list):
             parts = [b["text"] for b in content if isinstance(b, dict) and b.get("type") == "text"]
             if parts:
@@ -28,10 +26,17 @@ def _extract_text(messages) -> str:
 
 # --- Page Config ---
 st.set_page_config(
-    page_title="HealthFirst Medical Clinic",
-    page_icon="🏥",
-    layout="centered",
+    page_title="WellCare Plus Clinic",
+    page_icon="🌿",
+    layout="wide",
 )
+
+# --- Custom Header ---
+st.markdown(
+    "<h1 style='text-align: center; color: #2E8B57;'>🌿 WellCare Plus Clinic 🌿</h1>",
+    unsafe_allow_html=True
+)
+st.markdown("<p style='text-align:center;color:gray;'>Your trusted partner in health and wellness</p>", unsafe_allow_html=True)
 
 # --- Session State Init ---
 if "thread_id" not in st.session_state:
@@ -63,8 +68,7 @@ def connect_full_system():
 
 # --- Sidebar ---
 with st.sidebar:
-    st.title("HealthFirst Clinic")
-    st.caption("Multi-Agent Appointment System")
+    st.success("Welcome to WellCare Plus!")
 
     st.divider()
 
@@ -105,42 +109,51 @@ with st.sidebar:
     st.subheader("Try asking:")
     if st.session_state.mode == "full":
         st.markdown("""
-        - What are your clinic hours?
-        - I'd like to book an appointment
-        - Which doctors are available?
-        - What's the cancellation policy?
-        - Book me with Dr. Chen tomorrow at 10 AM
+        - 🌿 What are your clinic hours?
+        - 🩺 I'd like to book an appointment
+        - 👩‍⚕️ Which doctors are available?
+        - 📋 What's the cancellation policy?
+        - 📅 Book me with Dr. Chen tomorrow at 10 AM
         """)
     else:
         st.markdown("""
-        - What are your clinic hours?
-        - Which doctors work here?
-        - What's the cancellation policy?
-        - Do you accept insurance?
-        - Where is the clinic located?
+        - 🌿 What are your clinic hours?
+        - 👩‍⚕️ Which doctors work here?
+        - 📋 What's the cancellation policy?
+        - 💳 Do you accept insurance?
+        - 📍 Where is the clinic located?
         """)
 
     st.divider()
     st.caption("Powered by LangGraph + AWS Bedrock")
 
 # --- Main Chat Area ---
-st.title("HealthFirst Medical Clinic")
 if st.session_state.mode == "full":
-    st.caption("Ask questions, book appointments, or request confirmations. The supervisor routes automatically.")
+    st.caption("💬 Ask questions, book appointments, or request confirmations. The supervisor routes automatically.")
 else:
-    st.caption("Ask me anything about our clinic, doctors, policies, and services.")
+    st.caption("💬 Ask me anything about our clinic, doctors, policies, and services.")
 
-# Display chat history
+# Display chat history with styled bubbles
 for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+    if msg["role"] == "user":
+        st.markdown(
+            f"<div style='background-color:#E0F7FA;padding:10px;border-radius:10px;margin:5px 0;text-align:right;'>{msg['content']}</div>",
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown(
+            f"<div style='background-color:#FFF3E0;padding:10px;border-radius:10px;margin:5px 0;text-align:left;'>{msg['content']}</div>",
+            unsafe_allow_html=True
+        )
 
 # Chat input
 if prompt := st.chat_input("Type your message..."):
     # Show user message
     st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
+    st.markdown(
+        f"<div style='background-color:#E0F7FA;padding:10px;border-radius:10px;margin:5px 0;text-align:right;'>{prompt}</div>",
+        unsafe_allow_html=True
+    )
 
     # Get agent response
     config = {
@@ -152,19 +165,25 @@ if prompt := st.chat_input("Type your message..."):
 
     graph = st.session_state.graph
 
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            if st.session_state.mode == "full":
-                result = asyncio.run(graph.ainvoke(
-                    {"messages": [("user", prompt)]},
-                    config,
-                ))
-            else:
-                result = graph.invoke(
-                    {"messages": [("user", prompt)]},
-                    config,
-                )
-            response = _extract_text(result["messages"])
-            st.markdown(response)
+    with st.spinner("Thinking..."):
+        if st.session_state.mode == "full":
+            result = asyncio.run(graph.ainvoke(
+                {"messages": [("user", prompt)]},
+                config,
+            ))
+        else:
+            result = graph.invoke(
+                {"messages": [("user", prompt)]},
+                config,
+            )
+        response = _extract_text(result["messages"])
+        st.markdown(
+            f"<div style='background-color:#FFF3E0;padding:10px;border-radius:10px;margin:5px 0;text-align:left;'>{response}</div>",
+            unsafe_allow_html=True
+        )
 
     st.session_state.messages.append({"role": "assistant", "content": response})
+
+# --- Footer ---
+st.markdown("---")
+st.markdown("<p style='text-align:center;color:gray;'>📞 Call us at 123-456-7890 | 📍 123 Wellness Street</p>", unsafe_allow_html=True)
