@@ -24,7 +24,7 @@ def get_mcp_client():
     )
     return client
 
-async def get_calender_tools(client: MultiServerMCPClient):
+async def get_calendar_tools(client: MultiServerMCPClient):
     """
     Get the calendar tools from the composio MCP server.
     """

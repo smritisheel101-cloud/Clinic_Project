@@ -25,7 +25,7 @@ def create_confirmation_node(gmail_tools):
     Create a confirmation node that uses the Gmail tool to send appointment confirmations.
     """
     llm_with_tools = llm.bind_tools(gmail_tools)
-    def confirmation_node(state: MessagesState):
+    def confirmation_node(state: AgentState):
         message= [{"role": "system", "content": SYSTEM_PROMPT},]+state["messages"]
         response = llm_with_tools.invoke(message)
         return {"messages": [response]}

@@ -5,16 +5,16 @@ Booking graph : This graph manages the entire booking process, wires the booking
 from langgraph.graph import StateGraph, MessagesState, START
 from langgraph.prebuilt import ToolNode, tools_condition
 from agents.booking_agent import create_booking_node
-from tools.mcp_tool import get_mcp_client, get_calender_tools
+from tools.mcp_tool import get_mcp_client, get_calendar_tools
 from config.memory import checkpointer, store
 
 async def build_booking_graph():
     client = get_mcp_client()
-    calender_tools = await get_calender_tools(client)
+    calendar_tools = await get_calendar_tools(client)
 
-    if not calender_tools:
+    if not calendar_tools:
         raise RuntimeError("No calendar tools found in MCP server. Please check your MCP configuration and ensure calendar tools are available.")
-    booking_node, tools = create_booking_node(calender_tools)
+    booking_node, tools = create_booking_node(calendar_tools)
 
     builder = StateGraph(MessagesState)
     builder.add_node("booking_agent", booking_node)
