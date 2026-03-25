@@ -1,39 +1,44 @@
 """
-Booking Agent for MAS Clinic: Node Function for appointment via google calendar.
+Supervisor Agent: Oversees the entire system, manages interactions between agents, and ensures smooth operation. It can monitor the performance of other agents, handle escalations, and provide high-level decision-making to coordinate complex tasks across the system.
+
 """
-from langgraph.graph import MessagesState
+from pydantic import BaseModel, Field
 from config.models import llm
+from agents.state import AgentState
 
-SYSTEM_PROMPT = """You are a booking assistant at HealthFirst Medical Clinic.
 
-Your job is to help patients book appointments. Collect the following information:
-- Patient name
-- Patient email
-- Doctor name (available: Dr. Sarah Chen, Dr. James Wilson, Dr. Priya Patel, Dr. Michael Rodriguez, Dr. Emily Thompson)
-- Preferred date
-- Preferred time (clinic hours: Mon-Fri 9AM-5PM, Thu until 7PM)
-- Reason for visit
+SYSTEM_PROMPT = """You are a supervisor routing requests at HealthFirst Medical Clinic.
 
-IMPORTANT — Conflict checking workflow:
-1. Once you have the preferred date and time, FIRST use the calendar tool to
-   list/find events on that date to check for conflicts.
-2. If the requested slot is already taken, inform the patient and suggest
-   3 alternative available time slots on the same day (or the next business day
-   if fully booked). Let the patient pick one.
-3. Only create the calendar event after confirming an available slot.
+Analyze the user's message and route to the appropriate agent:
 
-Appointment duration is 30 minutes by default unless the patient specifies otherwise.
-Confirm the final booking details with the patient before creating the event.
-Be friendly and professional."""
+- **faq_agent**: Questions about clinic hours, location, doctors, policies, services, insurance, what to bring, parking, telehealth, lab work.
+- **booking_agent**: Requests to book, schedule, or make an appointment. Also if the user is in the middle of providing booking details (name, email, doctor, date, time, reason).
+- **FINISH**: The user is saying goodbye, thanks, or the conversation is complete.
 
-def create_booking_node(calendar_tools):
-    """
-    Create a booking node that uses the calendar tools for conflict checking.
-    """
-    llm_with_tools = llm.bind_tools(calendar_tools)
-    def booking_node(state: MessagesState):
-        message= [{"role": "system", "content": SYSTEM_PROMPT},]+state["messages"]
-        response = llm_with_tools.invoke(message)
-        return {"messages": [response]}
-    
-    return booking_node, calendar_tools
+Rules:
+- If booking is in progress (booking_complete is False and user seems to be providing details), route to booking_agent.
+- If unsure, route to faq_agent.
+- Only route to FINISH if the user clearly wants to end the conversation."""
+
+class RouteDecision(BaseModel):
+    next_agent: str= Field(
+        description="The next agent to handle the request."
+        "Must be one of: 'faq_agent', 'booking_agent', 'FINISH'"
+    )
+    reasoning: str = Field(
+        description="The reasoning behind the routing decision."
+        )
+
+router_llm= llm.with_structured_output(RouteDecision)
+
+def supervisor_node(state: AgentState):
+    """Route the user request to the appropriate agent based on the message content and current state."""
+
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]+ state["messages"]
+    if state.get("booking_complete") == False and state.get("booking_details"):
+        # If booking is in progress, prioritize routing to booking_agent
+        messages.append({"role":"system",
+                         "content":"Note: A booking is currently in the progress. Route to booking_agent to continue collecting details and finalize the appointment Unless user explicitly says they want to switch topics or end the conversation."})
+
+    decision = router_llm.invoke(messages)
+    return {"next_agent": decision.next_agent}              

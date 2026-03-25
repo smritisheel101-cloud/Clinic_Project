@@ -1,8 +1,8 @@
 """
 Confirmation Agent for MAS Clinic: Node Function for sending email confirmations via Google Gmail.
 """
-from langgraph.graph import MessagesState
 from config.models import llm
+from agents.state import AgentState
 
 SYSTEM_PROMPT = """You are a confirmation assistant at HealthFirst Medical Clinic.
  
